@@ -1,9 +1,9 @@
 import { C } from './consts/tokens'
 import { DB_URL, fmtTime, fmtTimeShort, fmtDate, fmtMin } from './consts/utils'
-import { Card, SectionLabel, SampleBadge, CardTitle, CardSub, StatusDot } from './views/UI'
+import { Card, SectionLabel, CardTitle, CardSub, StatusDot } from './views/UI'
 import {
   RampChart, DonutChart, InertiaChart, StimTrend,
-  BucketChart, SampleScatter, SampleHeatmap, SampleRidge,
+  BucketChart, LdrScatter, WeekdayHeatmap, RidgeChart,
 } from './views/Charts'
 import Clock from './views/Clock'
 import { useDespertadorData } from './consts/data'
@@ -162,23 +162,23 @@ export default function App() {
               <BucketChart events={events} />
             </Card>
 
-            {/* Sample charts */}
-            <SectionLabel>Análisis de distribución <SampleBadge /></SectionLabel>
+            {/* Distribution charts */}
+            <SectionLabel>Análisis de distribución</SectionLabel>
             <div style={GRID3}>
               <Card>
                 <CardTitle>Tiempo de reacción y luminosidad</CardTitle>
                 <CardSub>Despertar frente a lectura de luz al detener la alarma</CardSub>
-                <SampleScatter />
+                <LdrScatter events={events} />
               </Card>
               <Card>
                 <CardTitle>Eficiencia sensorial</CardTitle>
                 <CardSub>Estímulo total promedio necesario</CardSub>
-                <SampleHeatmap />
+                <WeekdayHeatmap events={events} />
               </Card>
               <Card>
                 <CardTitle>Distribución de inercia del sueño</CardTitle>
                 <CardSub>Dispersión del retraso de despertar</CardSub>
-                <SampleRidge />
+                <RidgeChart events={events} />
               </Card>
             </div>
           </>

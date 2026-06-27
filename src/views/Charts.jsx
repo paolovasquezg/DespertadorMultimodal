@@ -159,15 +159,11 @@ export function BucketChart({ events }) {
   )
 }
 
-// ── Sample scatter (LDR vs delay) ─────────────────────────────────────────────
-export function SampleScatter() {
-  const pts = Array.from({ length: 40 }, () => {
-    const ldr = 15 + Math.random() * 45
-    return {
-      x: Math.round(ldr),
-      y: Math.round(Math.max(0, (60 - ldr) * 0.25 + (Math.random() - 0.5) * 6)),
-    }
-  })
+// ── LDR vs delay scatter ──────────────────────────────────────────────────────
+export function LdrScatter({ events }) {
+  const pts = events
+    .filter(e => e.ldr !== null)
+    .map(e => ({ x: Math.round(e.ldr), y: Math.round(e.lagMin) }))
   return (
     <ResponsiveContainer width="100%" height={170}>
       <ScatterChart margin={{ top: 4, right: 4, left: -10, bottom: 20 }}>
@@ -187,14 +183,26 @@ export function SampleScatter() {
   )
 }
 
-// ── Sample heatmap (avg stimulus by weekday) ──────────────────────────────────
-export function SampleHeatmap() {
+// ── Avg stimulus by weekday ───────────────────────────────────────────────────
+export function WeekdayHeatmap({ events }) {
   const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
   const colorFor = v => {
-    const t = (v - 40) / 55
+    const t = Math.min(1, Math.max(0, (v - 40) / 55))
     return `rgba(${Math.round(28 + t * 96)},${Math.round(30 + t * 112)},${Math.round(40 + t * 200)},0.85)`
   }
-  const data = days.map(d => ({ label: d, val: Math.round(40 + Math.random() * 55) }))
+  const sums = new Array(7).fill(0)
+  const counts = new Array(7).fill(0)
+  events.forEach(e => {
+    const dow = e.programmed.getDay()
+    const idx = dow === 0 ? 6 : dow - 1  // Mon=0 … Sun=6
+    sums[idx] += (e.luz + e.vibracion + e.sonido) / 3
+    counts[idx] += 1
+  })
+  const data = days.map((d, i) => ({
+    label: d,
+    val: counts[i] ? Math.round(sums[i] / counts[i]) : null,
+    fill: counts[i] ? colorFor(Math.round(sums[i] / counts[i])) : 'rgba(160,163,180,0.20)',
+  }))
   return (
     <ResponsiveContainer width="100%" height={170}>
       <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
@@ -202,37 +210,49 @@ export function SampleHeatmap() {
         <XAxis dataKey="label" tick={TICK} axisLine={false} tickLine={false} />
         <YAxis domain={[0, 100]} tick={TICK} axisLine={false} tickLine={false}
           tickFormatter={v => v + '%'} />
-        <Tooltip content={<CustomTooltip formatter={v => 'estímulo promedio: ' + v + '%'} />} />
+        <Tooltip content={<CustomTooltip formatter={v => v === null ? 'sin eventos' : 'estímulo promedio: ' + v + '%'} />} />
         <Bar dataKey="val" radius={[4, 4, 0, 0]}>
-          {data.map((d, i) => <Cell key={i} fill={colorFor(d.val)} />)}
+          {data.map((d, i) => <Cell key={i} fill={d.fill} />)}
         </Bar>
       </BarChart>
     </ResponsiveContainer>
   )
 }
 
-// ── Sample ridge (sleep inertia distribution by time-of-day) ─────────────────
-export function SampleRidge() {
+// ── Sleep inertia distribution by time-of-day ─────────────────────────────────
+export function RidgeChart({ events }) {
   const groups = [
-    { key: 'temprano', label: 'Temprano (6-9am)', color: C.sound, mean: 4, spread: 3 },
-    { key: 'medio', label: 'Medio (9am-9pm)', color: C.light, mean: 6, spread: 4 },
-    { key: 'tarde', label: 'Tarde (9-11pm)', color: C.bad, mean: 11, spread: 5 },
+    { key: 'temprano', label: 'Temprano (6-9am)', color: C.sound, h0: 6,  h1: 9  },
+    { key: 'medio',    label: 'Medio (9am-9pm)',  color: C.light, h0: 9,  h1: 21 },
+    { key: 'tarde',    label: 'Tarde (9-11pm)',   color: C.bad,   h0: 21, h1: 23 },
   ]
-  const gauss = (x, mean, sd) => Math.exp(-((x - mean) ** 2) / (2 * sd * sd))
-  const xs = Array.from({ length: 36 }, (_, i) => i - 5)
+  const allLags = events.map(e => Math.round(e.lagMin))
+  const minX = allLags.length ? Math.min(-5, ...allLags) : -5
+  const maxX = allLags.length ? Math.max(30, ...allLags) : 30
+  const xs = Array.from({ length: maxX - minX + 1 }, (_, i) => i + minX)
+
+  const rawCounts = Object.fromEntries(groups.map(g => [g.key, {}]))
+  events.forEach(e => {
+    const h = e.programmed.getHours()
+    const g = groups.find(g => h >= g.h0 && h < g.h1)
+    if (!g) return
+    const x = Math.round(e.lagMin)
+    rawCounts[g.key][x] = (rawCounts[g.key][x] || 0) + 1
+  })
   const data = xs.map(x => {
     const pt = { label: x }
-    groups.forEach(g => { pt[g.key] = Math.round(gauss(x, g.mean, g.spread) * 100) })
+    groups.forEach(g => { pt[g.key] = rawCounts[g.key][x] || 0 })
     return pt
   })
   return (
     <ResponsiveContainer width="100%" height={170}>
-      <LineChart data={data} margin={{ top: 4, right: 4, left: -30, bottom: 20 }}>
+      <LineChart data={data} margin={{ top: 4, right: 4, left: -10, bottom: 20 }}>
         <CartesianGrid strokeDasharray="3 3" stroke={C.lineSoft} vertical={false} />
         <XAxis dataKey="label" tick={TICK} axisLine={false} tickLine={false}
           label={{ value: 'Retraso al despertar (min)', position: 'insideBottom', offset: -12, fill: C.muted, fontSize: 10 }} />
-        <YAxis hide />
-        <Tooltip content={<CustomTooltip formatter={(v, n) => `${n}: ${v}%`} />} />
+        <YAxis allowDecimals={false} tick={{ ...TICK, fontSize: 10 }} axisLine={false} tickLine={false}
+          tickFormatter={v => v} />
+        <Tooltip content={<CustomTooltip formatter={(v, n) => `${n}: ${v} ocurrencia${v === 1 ? '' : 's'}`} />} />
         {groups.map(g => (
           <Line key={g.key} type="monotone" dataKey={g.key} name={g.label}
             stroke={g.color} strokeWidth={2} dot={false} />
