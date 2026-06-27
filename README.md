@@ -1,4 +1,4 @@
-# Proyecto Internet de las Cosas - Despertador Multimodal - Visualización
+# Despertador Multimodal - Visualización
 
 Panel de visualización para el sistema de alarma multimodal.
 
