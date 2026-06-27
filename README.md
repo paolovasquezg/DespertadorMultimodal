@@ -1,4 +1,4 @@
-# Despertador multimodal — Visualización métricas
+# Proyecto Internet de las Cosas - Despertador Multimodal - Visualización
 
 Panel de visualización para el sistema de alarma multimodal.
 
@@ -28,7 +28,7 @@ Tres tarjetas (Luz, Vibración, Sonido) con el porcentaje promedio de cada estí
 ### Retraso de despertar
 Barras agrupadas en ventanas de 2 horas que muestran el retraso promedio de despertar según la hora de la alarma programada.
 
-### Análisis de distribución *(datos de muestra)*
+### Análisis de distribución
 Tres gráficos exploratorios generados con datos sintéticos:
 - **Tiempo de reacción y luminosidad** — dispersión del retraso vs. lectura de luz (LDR).
 - **Eficiencia sensorial** — estímulo promedio necesario por día de la semana.
